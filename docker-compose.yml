@@ -80,13 +80,17 @@ services:
 
   # === gRPC ===
   grpc-server:
-    build: ./grpc/server
+    build:
+      context: ./grpc
+      dockerfile: server/Dockerfile
     ports:
       - "50051:50051"
     command: ["python", "server.py"]
 
   grpc-client:
-    build: ./grpc/client
+    build:
+      context: ./grpc
+      dockerfile: client/Dockerfile
     depends_on:
       - grpc-server
     command: ["python", "client.py"]
