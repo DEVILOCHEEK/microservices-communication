@@ -135,8 +135,6 @@ services:
     depends_on:
       - rest-service-a
       - rest-service-b
-
-EOF
-
+      
       - name: Run docker compose up
         run: docker compose up -d --build
