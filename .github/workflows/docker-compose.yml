@@ -17,4 +17,4 @@ jobs:
 
       - name: Build and run Docker Compose
         run: |
-          docker compose -f .github/workflows/docker-compose.yml up -d --build
+          docker compose -f docker-compose.yml up -d --build
