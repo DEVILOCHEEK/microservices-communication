@@ -15,129 +15,128 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      # Тут можна додати кроки для побудови Docker-образів і запуску контейнерів
-
-      # Приклад: запуск docker-compose (потрібен docker і docker-compose на runner)
-      - name: Set up Docker Compose
+      - name: Create docker-compose.yml
         run: |
-          echo "version: '3.8'
+          cat > docker-compose.yml <<EOF
+version: "3.8"
 
-          services:
+services:
 
-            # === RESTful API ===
-            rest-service-a:
-              build: ./rest/service-a
-              ports:
-                - '5000:5000'
-              depends_on:
-                - rest-service-b
+  # === RESTful API ===
+  rest-service-a:
+    build: ./rest/service-a
+    ports:
+      - "5000:5000"
+    depends_on:
+      - rest-service-b
 
-            rest-service-b:
-              build: ./rest/service-b
-              ports:
-                - '5001:5001'
+  rest-service-b:
+    build: ./rest/service-b
+    ports:
+      - "5001:5001"
 
-            # === RabbitMQ Queue ===
-            rabbitmq:
-              image: rabbitmq:3-management
-              ports:
-                - '5672:5672'
-                - '15672:15672'
+  # === RabbitMQ Queue ===
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
 
-            rabbitmq-producer:
-              build: ./rabbitmq
-              command: ['python', 'producer.py']
-              depends_on:
-                - rabbitmq
+  rabbitmq-producer:
+    build: ./rabbitmq
+    command: ["python", "producer.py"]
+    depends_on:
+      - rabbitmq
 
-            rabbitmq-consumer:
-              build: ./rabbitmq
-              command: ['python', 'consumer.py']
-              depends_on:
-                - rabbitmq
+  rabbitmq-consumer:
+    build: ./rabbitmq
+    command: ["python", "consumer.py"]
+    depends_on:
+      - rabbitmq
 
-            # === Kafka + Zookeeper ===
-            zookeeper:
-              image: confluentinc/cp-zookeeper:7.5.0
-              environment:
-                ZOOKEEPER_CLIENT_PORT: 2181
-              ports:
-                - '2181:2181'
+  # === Kafka + Zookeeper ===
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    ports:
+      - "2181:2181"
 
-            kafka:
-              image: confluentinc/cp-kafka:7.5.0
-              depends_on:
-                - zookeeper
-              ports:
-                - '9092:9092'
-              environment:
-                KAFKA_BROKER_ID: 1
-                KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-                KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-                KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
-            kafka-producer:
-              build: ./kafka
-              command: ['python', 'producer.py']
-              depends_on:
-                - kafka
+  kafka-producer:
+    build: ./kafka
+    command: ["python", "producer.py"]
+    depends_on:
+      - kafka
 
-            kafka-consumer:
-              build: ./kafka
-              command: ['python', 'consumer.py']
-              depends_on:
-                - kafka
+  kafka-consumer:
+    build: ./kafka
+    command: ["python", "consumer.py"]
+    depends_on:
+      - kafka
 
-            kafka-event-producer:
-              build: ./kafka
-              command: ['python', 'event_producer.py']
-              depends_on:
-                - kafka
+  kafka-event-producer:
+    build: ./kafka
+    command: ["python", "event_producer.py"]
+    depends_on:
+      - kafka
 
-            kafka-event-consumer:
-              build: ./kafka
-              command: ['python', 'event_consumer.py']
-              depends_on:
-                - kafka
+  kafka-event-consumer:
+    build: ./kafka
+    command: ["python", "event_consumer.py"]
+    depends_on:
+      - kafka
 
-            # === gRPC ===
-            grpc-server:
-              build: ./grpc/server
-              ports:
-                - '50051:50051'
-              command: ['python', 'server.py']
+  # === gRPC ===
+  grpc-server:
+    build: ./grpc/server
+    ports:
+      - "50051:50051"
+    command: ["python", "server.py"]
 
-            grpc-client:
-              build: ./grpc/client
-              depends_on:
-                - grpc-server
-              command: ['python', 'client.py']
+  grpc-client:
+    build: ./grpc/client
+    depends_on:
+      - grpc-server
+    command: ["python", "client.py"]
 
-            # === Circuit Breaking ===
-            circuit-service-a:
-              build: ./circuit
-              command: ['uvicorn', 'service_a:app', '--host', '0.0.0.0', '--port', '8000']
-              ports:
-                - '8000:8000'
-              depends_on:
-                - circuit-service-b
+  # === Circuit Breaking ===
+  circuit-service-a:
+    build: ./circuit
+    command: ["uvicorn", "service_a:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    depends_on:
+      - circuit-service-b
 
-            circuit-service-b:
-              build: ./circuit
-              command: ['uvicorn', 'service_b:app', '--host', '0.0.0.0', '--port', '8001']
-              ports:
-                - '8001:8001'
+  circuit-service-b:
+    build: ./circuit
+    command: ["uvicorn", "service_b:app", "--host", "0.0.0.0", "--port", "8001"]
+    ports:
+      - "8001:8001"
 
-            # === API Gateway ===
-            gateway:
-              build: ./gateway
-              ports:
-                - '8080:8080'
-              command: ['uvicorn', 'fastapi_gateway:app', '--host', '0.0.0.0', '--port', '8080']
-              depends_on:
-                - rest-service-a
-                - rest-service-b
-          " > docker-compose.yml
+  # === API Gateway ===
+  gateway:
+    build: ./gateway
+    ports:
+      - "8080:8080"
+    command: ["uvicorn", "fastapi_gateway:app", "--host", "0.0.0.0", "--port", "8080"]
+    depends_on:
+      - rest-service-a
+      - rest-service-b
 
-      - name: Run docker-compose up
-        run: docker-compose up -d --build
+EOF
+
+      - name: Run docker compose up
+        run: docker compose up -d --build
